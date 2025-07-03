@@ -2,7 +2,7 @@
 
 This system enables fully offline voice recognition on a Raspberry Pi. It continuously listens for speech, transcribes it with the Vosk engine, and publishes results to MQTT for use in Node-RED. It also supports audio playback via the same USB speaker.
 
-Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the **KAYSUDA PC Microphone Speaker** (\~\$40 on Amazon).
+Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the **KAYSUDA PC Microphone Speaker** (\~\$40usd on Amazon).
 
 ---
 
