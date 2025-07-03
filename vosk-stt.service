@@ -1,0 +1,17 @@
+[Unit]
+Description=Vosk Speech-to-Text Service
+After=network.target mosquitto.service
+Requires=mosquitto.service
+
+[Service]
+User=pi
+Group=audio
+WorkingDirectory=/home/pi/vosk_pipe_stt
+ExecStart=/bin/bash -c "sleep 5 && ffmpeg -f alsa -i plughw:0,0 -acodec pcm_s16le -ar 16000 -ac 1 -f s16le - | /home/pi/vosk_pipe_stt/venv/bin/python pipe_stt.py"
+Restart=always
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
