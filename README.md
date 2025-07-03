@@ -59,6 +59,24 @@ pcm.!default {
 sudo reboot
 ```
 
+### 🔍 How to determine `hw:0,0`
+
+Use the following command to list audio devices:
+
+```bash
+aplay -l
+```
+
+Look for a device labeled something like:
+
+```
+card 0: SP300U [SPEAKPHONE SP300U], device 0: USB Audio [USB Audio]
+```
+
+This means your device path is `hw:0,0`. If it's card 1 instead, use `hw:1,0` and update your config accordingly.
+
+Device numbers can shift depending on which USB port the speaker is plugged into. If you're seeing device issues or errors like "No such device", try a different port or force device ordering in `alsa-base.conf` as shown above.
+
 ---
 
 ## 📦 Vosk + MQTT Setup (Python venv)
