@@ -105,10 +105,10 @@ rm vosk-model-small-en-us-0.15.zip
 #
 # Description: Converts live audio input (via stdin) to text using Vosk STT engine.
 #              Publishes partial and final transcription results to MQTT topics.
-#              Designed to be used with piped audio input (e.g., from ffmpeg).
+#              Designed to be used with piped audio input (e.g., from arecord).
 #
 # Input:
-#   Raw 16kHz 16-bit mono audio via stdin (from ffmpeg or arecord)
+#   Raw 16kHz 16-bit mono audio via stdin (from arecord or ffmpeg)
 #
 # Output:
 #   MQTT "voice/final"   - string: Final complete recognized phrase
@@ -125,6 +125,7 @@ MQTT_PORT = 1883
 MQTT_TOPIC_FINAL = "voice/final"
 MQTT_TOPIC_PARTIAL = "voice/partial"
 MQTT_CLIENT_ID = "vosk_stt_client"
+MODEL_PATH = "vosk-model-small-en-us-0.15"
 
 def on_connect(client, userdata, flags, rc):
     print(f"MQTT connected with result code {rc}", file=sys.stderr)
@@ -135,11 +136,11 @@ client.connect(MQTT_BROKER_ADDRESS, MQTT_PORT, 60)
 client.loop_start()
 time.sleep(1)
 
-if not os.path.exists("vosk-model-small-en-us-0.15"):
+if not os.path.exists(MODEL_PATH):
     print("Missing Vosk model folder.", file=sys.stderr)
     sys.exit(1)
 
-model = vosk.Model("vosk-model-small-en-us-0.15")
+model = vosk.Model(MODEL_PATH)
 rec = vosk.KaldiRecognizer(model, 16000)
 
 try:
@@ -183,11 +184,12 @@ Requires=mosquitto.service
 User=<your_username>
 Group=audio
 WorkingDirectory=/home/<your_username>/vosk_pipe_stt
-ExecStart=/bin/bash -c "sleep 5 && ffmpeg -f alsa -i plughw:0,0 -acodec pcm_s16le -ar 16000 -ac 1 -f s16le - | /home/<your_username>/vosk_pipe_stt/venv/bin/python pipe_stt.py"
+ExecStart=/bin/bash -c "/usr/bin/arecord -D plughw:0,0 -f S16_LE -r 16000 -c 1 | /home/<your_username>/vosk_pipe_stt/venv/bin/python /home/<your_username>/vosk_pipe_stt/pipe_stt.py"
 Restart=always
 RestartSec=5s
 StandardOutput=journal
 StandardError=journal
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 [Install]
 WantedBy=multi-user.target
@@ -215,8 +217,8 @@ sudo systemctl start vosk-stt.service
 ## 🐛 Troubleshooting Summary
 
 - 🔍 **Root Cause**: Playback failures were due to missing or invalid buffers. ALSA was receiving no usable stream and dropping the device.
-- 🔄 Replaced PyAudio with ffmpeg for input
-- 💤 Added sleep to allow device init under systemd
+- 🔄 Replaced PyAudio with arecord for input
+- 💤 Added sleep or buffer tuning for device init under systemd
 - 🎚️ Used speaker-test to confirm hardware worked
 - 🧠 Applied buffer settings to aplay/mpg123 for stability
 - 🎧 Enabled simultaneous mic input + audio playback
