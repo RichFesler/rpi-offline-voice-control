@@ -2,7 +2,7 @@
 
 This system enables fully offline voice recognition on a Raspberry Pi. It continuously listens for speech, transcribes it with the Vosk engine, and publishes results to MQTT for use in Node-RED. It also supports audio playback via the same USB speaker.
 
-Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the **KAYSUDA PC Microphone Speaker** (\~\$40usd on Amazon).
+Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the **KAYSUDA PC Microphone Speaker** (\~\$40 on Amazon).
 
 ---
 
@@ -120,6 +120,7 @@ rm vosk-model-small-en-us-0.15.zip
 import os, vosk, sys, json, time
 import paho.mqtt.client as mqtt
 
+# MQTT connection settings
 MQTT_BROKER_ADDRESS = "localhost"
 MQTT_PORT = 1883
 MQTT_TOPIC_FINAL = "voice/final"
@@ -127,41 +128,51 @@ MQTT_TOPIC_PARTIAL = "voice/partial"
 MQTT_CLIENT_ID = "vosk_stt_client"
 MODEL_PATH = "vosk-model-small-en-us-0.15"
 
+# Callback when MQTT connects to the broker
 def on_connect(client, userdata, flags, rc):
     print(f"MQTT connected with result code {rc}", file=sys.stderr)
 
+# Setup MQTT client and connect
 client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, client_id=MQTT_CLIENT_ID)
 client.on_connect = on_connect
 client.connect(MQTT_BROKER_ADDRESS, MQTT_PORT, 60)
 client.loop_start()
-time.sleep(1)
+time.sleep(1)  # Allow time for MQTT connection to initialize
 
+# Check if the Vosk model exists
 if not os.path.exists(MODEL_PATH):
     print("Missing Vosk model folder.", file=sys.stderr)
     sys.exit(1)
 
+# Load Vosk STT model and set 16kHz input
 model = vosk.Model(MODEL_PATH)
 rec = vosk.KaldiRecognizer(model, 16000)
 
 try:
+    # Process audio data from stdin
     while True:
-        data = sys.stdin.buffer.read(4096)
+        data = sys.stdin.buffer.read(4096)  # Read audio buffer in chunks
         if not data:
-            break
+            break  # End of input
+
         if rec.AcceptWaveform(data):
+            # Finalized result
             result = json.loads(rec.Result())
             if result['text']:
                 client.publish(MQTT_TOPIC_FINAL, result['text'])
                 print(f"Final: {result['text']}")
         else:
+            # Interim result
             partial = json.loads(rec.PartialResult())
             if partial['partial']:
                 client.publish(MQTT_TOPIC_PARTIAL, partial['partial'])
                 sys.stdout.write(f"\rPartial: {partial['partial']} ".ljust(80))
                 sys.stdout.flush()
 except KeyboardInterrupt:
+    # Graceful exit on Ctrl+C
     pass
 finally:
+    # Cleanup MQTT connection
     client.loop_stop()
     client.disconnect()
 ```
