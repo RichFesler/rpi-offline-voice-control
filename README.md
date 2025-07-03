@@ -1,25 +1,25 @@
-🗣️ Raspberry Pi Voice Control System: Offline STT & Playback (Vosk, FFmpeg, MQTT, Node-RED)
+## 🗣️ Raspberry Pi Voice Control System: Offline STT & Playback (Vosk, FFmpeg, MQTT, Node-RED)
 
 This system enables fully offline voice recognition on a Raspberry Pi. It continuously listens for speech, transcribes it with the Vosk engine, and publishes results to MQTT for use in Node-RED. It also supports audio playback via the same USB speaker.
 
-Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the KAYSUDA PC Microphone Speaker (~$40 on Amazon).
+Tested on Raspberry Pi OS Bookworm 64-bit (headless) using the **KAYSUDA PC Microphone Speaker** (\~\$40 on Amazon).
 
-💡 Features
+---
 
-Continuous offline speech recognition using Vosk
+## 💡 Features
 
-Publishes partial and final transcriptions to MQTT
+- Continuous offline speech recognition using Vosk
+- Publishes partial and final transcriptions to MQTT
+- Headless and auto-starts via systemd
+- Supports simultaneous mic input and audio playback
+- MP3/WAV playback via mpg123 or aplay
+- Fully offline and reliable under systemd
 
-Headless and auto-starts via systemd
+---
 
-Supports simultaneous mic input and audio playback
+## 🛠️ Prerequisites
 
-MP3/WAV playback via mpg123 or aplay
-
-Fully offline and reliable under systemd
-
-🛠️ Prerequisites
-
+```bash
 sudo apt-get update && sudo apt-get upgrade -y
 sudo apt-get install -y \
     build-essential git ffmpeg mpg123 \
@@ -29,29 +29,45 @@ sudo apt-get install -y \
 sudo rpi-update
 sudo usermod -aG audio <your_username>
 sudo reboot
+```
 
-🔊 ALSA Configuration
+---
 
+## 🔊 ALSA Configuration
+
+```bash
 sudo nano /etc/modprobe.d/alsa-base.conf
+```
 
+```ini
 options snd-usb-audio index=0
 options snd-bcm2835 index=1
+```
 
+```bash
 sudo nano /etc/asound.conf
+```
 
+```ini
 pcm.!default {
     type plug
     slave.pcm "hw:0,0"
 }
+```
 
+```bash
 sudo reboot
+```
 
-📦 Vosk + MQTT Setup (Python venv)
+---
 
-Why use a venv?
+## 📦 Vosk + MQTT Setup (Python venv)
 
-Using a Python virtual environment isolates project dependencies like vosk and paho-mqtt from your system-wide Python. It ensures clean upgrades, fewer conflicts, and a reproducible install.
+### Why use a venv?
 
+Using a Python virtual environment isolates project dependencies like `vosk` and `paho-mqtt` from your system-wide Python. It ensures clean upgrades, fewer conflicts, and a reproducible install.
+
+```bash
 mkdir ~/vosk_pipe_stt
 cd ~/vosk_pipe_stt
 python3 -m venv venv
@@ -60,9 +76,13 @@ pip install vosk paho-mqtt
 wget https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip
 unzip vosk-model-small-en-us-0.15.zip
 rm vosk-model-small-en-us-0.15.zip
+```
 
-🧠 pipe_stt.py
+---
 
+## 🧠 pipe\_stt.py
+
+```python
 # Name: pipe_stt.py
 #
 # Description: Converts live audio input (via stdin) to text using Vosk STT engine.
@@ -125,11 +145,17 @@ except KeyboardInterrupt:
 finally:
     client.loop_stop()
     client.disconnect()
+```
 
-⚙️ systemd Auto-Start
+---
 
+## ⚙️ systemd Auto-Start
+
+```bash
 sudo nano /etc/systemd/system/vosk-stt.service
+```
 
+```ini
 [Unit]
 Description=Vosk Speech-to-Text Service
 After=network.target mosquitto.service
@@ -147,35 +173,35 @@ StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
+```
 
+```bash
 sudo chmod o+rx /home/<your_username>
 sudo chmod o+rx /home/<your_username>/vosk_pipe_stt
 sudo systemctl daemon-reload
 sudo systemctl enable vosk-stt.service
 sudo systemctl start vosk-stt.service
+```
 
-🔄 Node-RED Playback Setup
+---
 
-Inject Node → Payload: /home/pi/audio/testaudio.mp3
+## 🔄 Node-RED Playback Setup
 
-Exec Node → Command: mpg123 -a default -b 512
+- Inject Node → Payload: `/home/pi/audio/testaudio.mp3`
+- Exec Node → Command: `mpg123 -a default -b 512`
+- WAV Alternative: `aplay -D default -f S16_LE -r 48000 -c 2 -B 96000 -F 24000`
+- Debug Node → capture `msg.payload`, `msg.stderr`, and `msg.rc`
 
-WAV Alternative: aplay -D default -f S16_LE -r 48000 -c 2 -B 96000 -F 24000
+---
 
-Debug Node → capture msg.payload, msg.stderr, and msg.rc
+## 🐛 Troubleshooting Summary
 
-🐛 Troubleshooting Summary
-
-🔍 Root Cause: Playback failures were due to missing or invalid buffers. ALSA was receiving no usable stream and dropping the device.
-
-🔄 Replaced PyAudio with ffmpeg for input
-
-💤 Added sleep to allow device init under systemd
-
-🎚️ Used speaker-test to confirm hardware worked
-
-🧠 Applied buffer settings to aplay/mpg123 for stability
-
-🎧 Enabled simultaneous mic input + audio playback
+- 🔍 **Root Cause**: Playback failures were due to missing or invalid buffers. ALSA was receiving no usable stream and dropping the device.
+- 🔄 Replaced PyAudio with ffmpeg for input
+- 💤 Added sleep to allow device init under systemd
+- 🎚️ Used speaker-test to confirm hardware worked
+- 🧠 Applied buffer settings to aplay/mpg123 for stability
+- 🎧 Enabled simultaneous mic input + audio playback
 
 This configuration delivers a reliable, offline-capable voice interface for Raspberry Pi automation or embedded projects.
+
