@@ -1,4 +1,4 @@
-🗣️ Raspberry Pi Voice Control System: Offline STT & Playback
+## 🗣️ Raspberry Pi Voice Control System: Offline STT & Playback
 (Vosk, FFmpeg, MQTT, Node-RED)
 
 This system enables fully offline voice recognition on a Raspberry Pi. It continuously listens for speech, transcribes it with the Vosk engine, and publishes results to MQTT for use in Node-RED. It also supports audio playback via the same USB speaker.
